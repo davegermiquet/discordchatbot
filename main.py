@@ -27,7 +27,6 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 load_dotenv()
 
 TOKEN=os.environ.get("BOTTOKEN")
-CHANNELIDDASIA=os.environ.get("HANGOUTCHANNELDASIA")
 from ollama import AsyncClient
 ollamaclient = AsyncClient(
   host='http://' + os.environ.get("HOSTOLLAMA")
