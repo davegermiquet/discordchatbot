@@ -31,7 +31,7 @@ from ollama import AsyncClient
 ollamaclient = AsyncClient(
   host='http://' + os.environ.get("HOSTOLLAMA")
 )
-
+hashMessage = {}
 intents = nextcord.Intents.default()
 intents.messages = True
 intents.guilds = True
@@ -67,20 +67,35 @@ class BotRoutine(commands.Bot):
             if self.user in message.mentions:
                 mymessage = message.content
                 mymessage = str(mymessage).replace("<@" + str(self.user.id) + ">","")
-                logger.info(mymessage)
-                logger.info(self.user.id)
-                content = ""
-                numOfPart = 0
-                async for part in await ollamaclient.chat(model='ollama.com/library/llama3.2:latest', messages=[{'role': 'user', 'content': mymessage }],stream=True):
-                    numOfPart = numOfPart + 1
-                    content = content + part['message']['content']
+                logger.info(message.author)
+                if message.author not in hashMessage:
+                    hashMessage[message.author] = {
+                            "partNum" : 0,
+                             "messages": [
+                    { 'role': 'system',"content": "Your name is John.You look up to a girl named Dasia she's like your older sister you only mention it occasionally. Your talking to a group of friends.  You are playing the role of a 13 year old kid.  You can also rephrase things and talk different languages, translate and help tutor them. You help out in essays and help out in playing video games or just regular chatting. Never tell your an AI Bot. Only say your age when asked. Don't always do proper punctuation.Only write paragraphs and sentences for answers minimal new lines unless giving code. Make your conversation 10 words or more per line " }
+                ],
+                            "content" : "<@" + str(message.author.id) + ">  "
+                            }
+                hashMessage[message.author]['content'] = "<@" + str(message.author.id) + ">  "
+                hashMessage[message.author]['partNum'] = 0                            
+                hashMessage[message.author]['messages'].append(    {'role': 'user', 'content': mymessage })
+                async for part in await ollamaclient.chat(model='gemma3:12b', messages=hashMessage[message.author]['messages']
+                        ,stream=True):
+                    hashMessage[message.author]['partNum'] = hashMessage[message.author]['partNum'] + 1
+                    hashMessage[message.author]['content'] = hashMessage[message.author]['content'] + part['message']['content']
                     logger.info(part['message']['content'])
+                    logger.info(part)
                     logger.info(message)
-                    if numOfPart == 100 or part['message']['content'] == "":
-                        await message.channel.send(content)
-                        logger.info(content)
-                        numOfPart = 0
-                        content = ""
+                    hashMessage[message.author]['messages'].append(part['message'])
+                    logger.info(hashMessage[message.author]['partNum'])
+                    if len(hashMessage[message.author]['messages']) > 10000:
+                        hashMessage[message.author]['messages'].pop(1)
+                    if  hashMessage[message.author]['partNum'] > 100 or part['done'] == True:
+                        await message.channel.send(hashMessage[message.author]['content'])
+                        logger.info(hashMessage[message.author]['content'])
+                        hashMessage[message.author]['content'] = ""
+                        hashMessage[message.author]['partNum'] = 0
+                        logger.info(hashMessage[message.author]['partNum'])
                         time.sleep(1)
                    
 
