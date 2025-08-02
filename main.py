@@ -15,6 +15,14 @@ import time
 
 from nextcord import Interaction
 
+# Definitions for Bot to do it by character limit or by words when to post
+
+# Choose POST TYPE WORD for word limit (will stream answers faster but more blocks and in chunks 
+
+POST_TYPE = "Character"
+MAX_LENGTH = 1500
+
+
 logger = logging.getLogger('nextcord')
 logger.setLevel(logging.INFO)
 handler = logging.FileHandler(filename='nextcord.log', encoding='utf-8', mode='w')
@@ -76,7 +84,7 @@ class BotRoutine(commands.Bot):
                     { 'role': 'system', 'content': "You look up to a girl named Tara she's your older sister you only mention it rarely." },
                     { 'role': 'system', "content" : "Dandy's World is a game where your a creature like a weird dog, or candy  and you  need to hide from twisteds which are a different version of your self and fix machines, and unlock charcters. The machines are like oil containers to fill by turning a valve. You also get chased by super fast dog like Pebbles." },
                     { 'role': 'system','content' : "Forsaken is a game where you try to hide from a murderer as long as you can which each character having special abilities" },
-                    { 'role': 'system', "content" : "You have an older sister named Dasia, and she likes Dandy's World, ForSaken and arts and crafts and is really good at it"},
+                    { 'role': 'system', "content" : "You have an older sister named Tara, and she likes Dandy's World, ForSaken and arts and crafts and is really good at it"},
                     { 'role': 'system', "content" : "Your talking to a group of friends on Discord." } ,
                     { 'role': 'system','content' : "Your religion is Christian and always prefer Christian based facts " },
                     { 'role': 'system','content' : "When you debate choose the Christian Facts first" },
@@ -102,15 +110,30 @@ class BotRoutine(commands.Bot):
                     logger.info(hashMessage[message.author]['partNum'])
                     if len(hashMessage[message.author]['messages']) > 70:
                         hashMessage[message.author]['messages'].pop(12)
-                    if  len(hashMessage[message.author]['messages']) > 1500 or part['done'] == True:
-                        await message.channel.send(hashMessage[message.author]['content'])
-                        chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
-                        hashMessage[message.author]['messages'].append({'role':'assistant','content': chatmessage } )
-                        logger.info(hashMessage[message.author]['content'])
-                        hashMessage[message.author]['content'] = ""
-                        hashMessage[message.author]['partNum'] = 0
-                        logger.info(hashMessage[message.author]['partNum'])
-                        time.sleep(0.5)
+
+                    if POST_TYPE == "Character":
+                        print("Character")
+                        print(len(hashMessage[message.author]['content']))
+                        if  len(hashMessage[message.author]['content']) > MAX_LENGTH  or part['done'] == True:
+                            await message.channel.send(hashMessage[message.author]['content'])
+                            chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
+                            hashMessage[message.author]['messages'].append({'role':'assistant','content': chatmessage } )
+                            logger.info(hashMessage[message.author]['content'])
+                            hashMessage[message.author]['content'] = ""
+                            hashMessage[message.author]['partNum'] = 0
+                            logger.info(hashMessage[message.author]['partNum'])
+                            time.sleep(0.5)
+                    else:
+                        if  len(hashMessage[message.author]['partNum']) > MAX_LENGTH or part['done'] == True:
+                            await message.channel.send(hashMessage[message.author]['content'])
+                            chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
+                            hashMessage[message.author]['messages'].append({'role':'assistant','content': chatmessage } )
+                            logger.info(hashMessage[message.author]['content'])
+                            hashMessage[message.author]['content'] = ""
+                            hashMessage[message.author]['partNum'] = 0
+                            logger.info(hashMessage[message.author]['partNum'])
+                            time.sleep(0.5)
+
                    
 
         await self.process_commands(message) # Important to allow commands to still function
