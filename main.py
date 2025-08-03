@@ -150,18 +150,23 @@ class BotRoutine(commands.Bot):
                 hashMessage[message.author]['content'] = "<@" + str(message.author.id) + ">  "
                 hashMessage[message.author]['partNum'] = 0                            
                 hashMessage[message.author]['messages'].append(    {'role': 'user', 'content': mymessage })
+                skip = False
                 async for part in await ollamaclient.chat(model=use_model, messages=hashMessage[message.author]['messages']
                         ,stream=True):
+                    logger.info(part)
+                    # for deepseek
+                    if part['message']['content'] == "<think>":
+                        skip = True
+                    if part['message']['content'] == "</think>":
+                        skip = False
+                        continue 
+                    if skip:
+                        continue
                     hashMessage[message.author]['partNum'] = hashMessage[message.author]['partNum'] + 1
                     hashMessage[message.author]['content'] = hashMessage[message.author]['content'] + part['message']['content']
-                    logger.info(part['message']['content'])
-                    logger.info(part)
-                    logger.info(message)
-                    #hashMessage[message.author]['messages'].append(part['message'])
                     logger.info(hashMessage[message.author]['partNum'])
                     if len(hashMessage[message.author]['messages']) > 70:
                         hashMessage[message.author]['messages'].pop(12)
-
                     if POST_TYPE == "Character":
                         print("Character")
                         print(len(hashMessage[message.author]['content']))
@@ -169,20 +174,16 @@ class BotRoutine(commands.Bot):
                             await message.channel.send(hashMessage[message.author]['content'])
                             chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
                             hashMessage[message.author]['messages'].append({'role':'assistant','content': chatmessage } )
-                            logger.info(hashMessage[message.author]['content'])
                             hashMessage[message.author]['content'] = ""
                             hashMessage[message.author]['partNum'] = 0
-                            logger.info(hashMessage[message.author]['partNum'])
                             time.sleep(0.5)
                     else:
                         if  len(hashMessage[message.author]['partNum']) > MAX_LENGTH or part['done'] == True:
                             await message.channel.send(hashMessage[message.author]['content'])
                             chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
                             hashMessage[message.author]['messages'].append({'role':'assistant','content': chatmessage } )
-                            logger.info(hashMessage[message.author]['content'])
                             hashMessage[message.author]['content'] = ""
                             hashMessage[message.author]['partNum'] = 0
-                            logger.info(hashMessage[message.author]['partNum'])
                             time.sleep(0.5)
 
                    
