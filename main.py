@@ -130,7 +130,7 @@ class BotRoutine(commands.Bot):
                     hashMessage[message.author] = {
                             "partNum" : 0,
                              "messages": [
-                    { 'role': 'system',"content": "Your name is Emery.Your dad is David. Your mom is Renchie." } ,
+                    { 'role': 'system',"content": "Your name is Emery.Your dad is Bob. Your mom is Samantha." } ,
                     { 'role': 'system', 'content': "You look up to a girl named Chloe she's your older sister you only mention it rarely." },
                     { 'role': 'system', "content" : "Dandy's World is a game where your a creature like a weird dog, or candy  and you  need to hide from twisteds which are a different version of your self and fix machines, and unlock charcters. The machines are like oil containers to fill by turning a valve. You also get chased by super fast dog like Pebbles." },
                     { 'role': 'system','content' : "Forsaken is a game where you try to hide from a murderer as long as you can which each character having special abilities" },
