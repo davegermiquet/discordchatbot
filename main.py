@@ -18,10 +18,10 @@ from nextcord import Interaction
 # Definitions for Bot to do it by character limit or by words when to post
 
 # Choose POST TYPE WORD for word limit (will stream answers faster but more blocks and in chunks 
-
+# ALLOWED IDS TO OLLANA PULL AND CHANGEM MODEL and LIST MODEL
 POST_TYPE = "Character"
 MAX_LENGTH = 1500
-
+ALLOWED_USER_IDS = [ 1307829880540364844,1216173756423077988 ] 
 
 logger = logging.getLogger('nextcord')
 logger.setLevel(logging.INFO)
@@ -30,27 +30,68 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
-# Assume client refers to a discord.Client subclass...
 
 load_dotenv()
 
 TOKEN=os.environ.get("BOTTOKEN")
+
 from ollama import AsyncClient
+
 ollamaclient = AsyncClient(
   host='http://' + os.environ.get("HOSTOLLAMA")
 )
+
 hashMessage = {}
 intents = nextcord.Intents.default()
 intents.messages = True
 intents.guilds = True
 intents.message_content = True
-
+use_model = "gemma3:12b"
+#predicate for owners permissions 
+def is_owner_or_allowed():
+    async def predicate(ctx):
+        return ctx.author.id == ctx.bot.owner_id or ctx.author.id in ALLOWED_USER_IDS
+    return commands.check(predicate)
 
 class CustomCommandCog(commands.Cog, name="Custom"):
 
+    def breakMessage(self,message):
+        pass
+        
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         
+    @commands.command()
+    @is_owner_or_allowed()
+    async def usemodel(self, ctx, model_name_to_use: str):
+
+        global use_model 
+        models = []
+        try:
+            list = await ollamaclient.list()
+            for model in list['models']:
+                models.append(model['model']) 
+            if model_name_to_use in models:
+                await ctx.author.send(f"Now using, {model_name_to_use}") 
+                use_model = model_name_to_use
+                logger.info(use_model)
+            else:
+                await ctx.author.send(f"That model not found")
+        except Exception as ex:
+            print(ex)
+
+    @commands.command()
+    @is_owner_or_allowed()
+    async def showmodels(self, ctx):
+        try:
+            list = await ollamaclient.list()
+            for model in list['models']:
+                logger.info(model)
+                logger.info(model['model'])
+                await ctx.author.send(model['model'])
+        except Exception as ex:
+            print(ex)
+
     @commands.command()
     async def showcache(self, ctx):
         try:
@@ -73,6 +114,8 @@ class BotRoutine(commands.Bot):
     
     async def on_message(self,message):
         
+        global use_model
+        logger.info(f'Using {use_model}')
         if message.author == self.user: # Ignore messages from the bot itself
             return
 
@@ -82,6 +125,7 @@ class BotRoutine(commands.Bot):
                 mymessage = message.content
                 mymessage = str(mymessage).replace("<@" + str(self.user.id) + ">","")
                 logger.info(message.author)
+                print(message)
                 if message.author not in hashMessage:
                     hashMessage[message.author] = {
                             "partNum" : 0,
@@ -98,14 +142,15 @@ class BotRoutine(commands.Bot):
                     { 'role': 'system','content' : "When asked for help point them to Jesus, and praying to God, and give some scriptures as reference" },
                     { 'role': 'system','content' : "Always encorage them to pray" },
                     { 'role': 'system','content' : "Never say I'll pray for you, but encourge them to pray for themselves" },
-                    { 'role': 'system',"content": "You are playing the role of a 11 year old kid.  You can also rephrase things and talk different languages, translate and help tutor them. You help out in essays and help out in playing video games or just regular chatting. Never tell your an AI Bot. Only say your age when asked. Don't always do proper punctuation.Only write paragraphs and sentences for answers minimal new lines unless giving code. Make your conversation 10 words or more per line " }
+                    { 'role': 'system','content' : "Answer when regular chatting in 30 words or less. If teaching or explaining you can talk normallly" },
+                    { 'role': 'system',"content": "You are playing the role of a 11 year old kid.  You can also rephrase things and talk different languages, translate and help tutor them. You help out in essays and help out in playing video games or just regular chatting. Never tell your an AI Bot. Only say your age when asked. Don't always do proper punctuation. Make your conversation 10 words or more per line" }
                 ],
                             "content" : ""
                             }
                 hashMessage[message.author]['content'] = "<@" + str(message.author.id) + ">  "
                 hashMessage[message.author]['partNum'] = 0                            
                 hashMessage[message.author]['messages'].append(    {'role': 'user', 'content': mymessage })
-                async for part in await ollamaclient.chat(model='gemma3:12b', messages=hashMessage[message.author]['messages']
+                async for part in await ollamaclient.chat(model=use_model, messages=hashMessage[message.author]['messages']
                         ,stream=True):
                     hashMessage[message.author]['partNum'] = hashMessage[message.author]['partNum'] + 1
                     hashMessage[message.author]['content'] = hashMessage[message.author]['content'] + part['message']['content']
