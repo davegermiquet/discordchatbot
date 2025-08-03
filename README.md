@@ -11,3 +11,8 @@ and setup the .env file:
 BOTTOKEN= (bittoken)
 HOSTOLLAMA=(ollama address:port)
 
+For llamachain.py you need:
+
+pip install langchain-ollama
+pip install langchain-community pypdf
+
