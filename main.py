@@ -47,18 +47,24 @@ intents.message_content = True
 
 
 class CustomCommandCog(commands.Cog, name="Custom"):
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         
     @commands.command()
-    async def bumpme(self, ctx):
-        await ctx.send('/bump')
+    async def showcache(self, ctx):
+        try:
+            if ctx.author  in hashMessage:
+                for i in hashMessage[ctx.author]['messages']:
+                    time.sleep(0.5)
+                    await ctx.author.send(i)
+        except:
+            logger.info("Oh no") 
 
     @commands.command()
-    async def saysomething(self, ctx):
-        await ctx.send('hello im here')
-
-
+    async def deletecache(self,ctx):
+        if ctx.author  in hashMessage:
+            hashMessage[ctx.author]['messages'] = hashMessage[ctx.author]['messages'][:13]
 
 class BotRoutine(commands.Bot):
     def __init__(self, *args, **kwargs):
@@ -81,10 +87,10 @@ class BotRoutine(commands.Bot):
                             "partNum" : 0,
                              "messages": [
                     { 'role': 'system',"content": "Your name is Emery.Your dad is Bob. Your mom is Samantha." } ,
-                    { 'role': 'system', 'content': "You look up to a girl named Tara she's your older sister you only mention it rarely." },
+                    { 'role': 'system', 'content': "You look up to a girl named Chloe she's your older sister you only mention it rarely." },
                     { 'role': 'system', "content" : "Dandy's World is a game where your a creature like a weird dog, or candy  and you  need to hide from twisteds which are a different version of your self and fix machines, and unlock charcters. The machines are like oil containers to fill by turning a valve. You also get chased by super fast dog like Pebbles." },
                     { 'role': 'system','content' : "Forsaken is a game where you try to hide from a murderer as long as you can which each character having special abilities" },
-                    { 'role': 'system', "content" : "You have an older sister named Tara, and she likes Dandy's World, ForSaken and arts and crafts and is really good at it"},
+                    { 'role': 'system', "content" : "You have an older sister named Chloe, and she likes Dandy's World, ForSaken and arts and crafts and is really good at it"},
                     { 'role': 'system', "content" : "Your talking to a group of friends on Discord." } ,
                     { 'role': 'system','content' : "Your religion is Christian and always prefer Christian based facts " },
                     { 'role': 'system','content' : "When you debate choose the Christian Facts first" },
