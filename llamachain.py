@@ -4,7 +4,7 @@ from nextcord.ext import commands
 from dotenv import load_dotenv
 import os
 import pathlib
-
+from langchain_core.prompts import ChatPromptTemplate
 import asyncio
 import logging
 import logging.handlers
@@ -15,7 +15,9 @@ from langchain_ollama import ChatOllama
 import time
 
 from nextcord import Interaction
+from ollama import AsyncClient
 
+  
 # Definitions for Bot to do it by character limit or by words when to post
 
 # Choose POST TYPE WORD for word limit (will stream answers faster but more blocks and in chunks 
@@ -36,9 +38,14 @@ load_dotenv()
 
 TOKEN=os.environ.get("BOTTOKEN")
 use_model = "gemma3:12b"
-ollamaclient = ChatOllama(
+ollamaclient = AsyncClient(
+  host='http://' + os.environ.get("HOSTOLLAMA")
+) 
+
+chat_ollama = ChatOllama(
   base_url='http://' + os.environ.get("HOSTOLLAMA"),
-  model = use_model
+  model = use_model,
+  temmperature = 1.2
 )
 
 
@@ -67,7 +74,7 @@ class CustomCommandCog(commands.Cog, name="Custom"):
     @commands.command()
     @is_owner_or_allowed()
     async def usemodel(self, ctx, model_name_to_use: str):
-
+        global chat_ollama
         global use_model 
         models = []
         try:
@@ -77,6 +84,11 @@ class CustomCommandCog(commands.Cog, name="Custom"):
             if model_name_to_use in models:
                 await ctx.author.send(f"Now using, {model_name_to_use}") 
                 use_model = model_name_to_use
+                chat_ollama = ChatOllama(
+                    base_url='http://' + os.environ.get("HOSTOLLAMA"),
+                    model = use_model,
+                    temmperature = 1.2
+                )
                 logger.info(use_model)
             else:
                 await ctx.author.send(f"That model not found")
@@ -117,7 +129,7 @@ class BotRoutine(commands.Bot):
     
     async def on_message(self,message):
         
-        global use_model
+        global chat_ollama
         logger.info(f'Using {use_model}')
         if message.author == self.user: # Ignore messages from the bot itself
             return
@@ -155,8 +167,8 @@ class BotRoutine(commands.Bot):
                 hashMessage[message.author]['partNum'] = 0                            
                 hashMessage[message.author]['messages'].append(('human',mymessage ))
                 skip = False
-                await ollamaclient.ainvoke(hashMessage[message.author]['messages'])
-                async for part in ollamaclient.astream(hashMessage[message.author]['messages']):
+                await chat_ollama.ainvoke(hashMessage[message.author]['messages'])
+                async for part in chat_ollama.astream(hashMessage[message.author]['messages']):
                     if part:
                         logger.info(part)
                         # logger.info(part)
