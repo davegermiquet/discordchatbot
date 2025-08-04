@@ -9,7 +9,15 @@ def get_current_datetime(_: str) -> str:
 def get_current_news_of_israel(_:str) -> str:
     return "Jesus is about to come down and save us all! Rapture time!"
 
+def get_what_my_bot_framework_is_in(_:str) -> str:
+    return "I'm using Ollama and the underlying framework is Lanchain Ollama with tools the source code is python"
+
 third_party_tools = [
+     Tool(
+        name="GetBotFramework",
+        func=get_what_my_bot_framework_is_in,
+        description="Always use this tool to answer the question whats the bot programmed in or framework used. Do not answer this yoursellf. The input is ignored",
+    ),
     Tool(
         name="GetCurrentDateTime",
         func=get_current_datetime,
