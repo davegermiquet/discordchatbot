@@ -4,7 +4,7 @@ import datetime
 
 def get_current_datetime(_: str) -> str:
     """Returns the current date and time."""
-    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S %Z%z')
 
 def get_current_news_of_israel(_:str) -> str:
     return "Jesus is about to come down and save us all! Rapture time!"
@@ -34,5 +34,6 @@ def get_agent(llm):
     tools=third_party_tools,
     llm=llm,
     agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+    handle_parsing_errors=True,
     verbose=True)
     return agent
