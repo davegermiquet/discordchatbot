@@ -6,6 +6,7 @@ import os
 import pathlib
 from langchain_core.prompts import ChatPromptTemplate
 import logging
+import asyncio
 import logging.handlers
 import os
 import sys  
@@ -14,8 +15,6 @@ from langchain.agents import initialize_agent, AgentType
 from langchain.agents.agent import AgentExecutor
 import time
 from langchain_core.messages import HumanMessage,SystemMessage,AIMessage
-import datetime
-from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable
 from langchain_core.tools import tool
 from langchain_core.output_parsers import StrOutputParser
@@ -53,7 +52,7 @@ ollamaclient = AsyncClient(
 chat_ollama = ChatOllama(
   base_url='http://' + os.environ.get("HOSTOLLAMA"),
   model = use_model,
-  temmperature = 1.2,
+  temperature = 1.2,
   streaming=True
 )
 
@@ -96,7 +95,7 @@ class CustomCommandCog(commands.Cog, name="Custom"):
                 chat_ollama = ChatOllama(
                     base_url='http://' + os.environ.get("HOSTOLLAMA"),
                     model = use_model,
-                    temmperature = 1.2,
+                    temperature = 1.2,
                     streaming=True
                 )
                 logger.info(use_model)
@@ -109,8 +108,8 @@ class CustomCommandCog(commands.Cog, name="Custom"):
     @is_owner_or_allowed()
     async def showmodels(self, ctx):
         try:
-            list = await ollamaclient.list()
-            for model in list['models']:
+            model_list = await ollamaclient.list()
+            for model in model_list['models']:
                 logger.info(model)
                 logger.info(model['model'])
                 await ctx.author.send(model['model'])
@@ -120,17 +119,17 @@ class CustomCommandCog(commands.Cog, name="Custom"):
     @commands.command()
     async def showcache(self, ctx):
         try:
-            if ctx.author  in hashMessage:
-                for i in hashMessage[ctx.author]['messages']:
-                    time.sleep(0.5)
+            if ctx.author.id  in hashMessage:
+                for i in hashMessage[ctx.author.id]['messages']:
+                    await asyncio.sleep(0.5)
                     await ctx.author.send(i)
         except:
             logger.info("Oh no") 
 
     @commands.command()
     async def deletecache(self,ctx):
-        if ctx.author  in hashMessage:
-            hashMessage[ctx.author]['messages'] = hashMessage[ctx.author]['messages'][:13]
+        if ctx.author.id in hashMessage:
+            hashMessage[ctx.author.id]['messages'] = hashMessage[ctx.author.id]['messages'][:13]
 
 class BotRoutine(commands.Bot):
     def __init__(self, *args, **kwargs):
@@ -138,7 +137,6 @@ class BotRoutine(commands.Bot):
     
     
     async def on_message(self,message):
-        global get_current_date_time        
         global chat_ollama
         logger.info(f'Using {use_model}')
         if message.author == self.user: # Ignore messages from the bot itself
@@ -151,8 +149,8 @@ class BotRoutine(commands.Bot):
                 mymessage = str(mymessage).replace("<@" + str(self.user.id) + ">","")
                 logger.info(message.author)
                 print(message)
-                if message.author not in hashMessage:
-                    hashMessage[message.author] = {
+                if message.author.id not in hashMessage:
+                    hashMessage[message.author.id] = {
                             "partNum" : 0,
                              "messages": [
                     SystemMessage(content="Your name is Emery.Your dad is Bob. Your mom is Samantha.") ,
@@ -174,19 +172,18 @@ class BotRoutine(commands.Bot):
                             "content" : ""
                             }
                     
-                hashMessage[message.author]['content'] = "<@" + str(message.author.id) + ">  "
-                hashMessage[message.author]['partNum'] = 0     
+                hashMessage[message.author.id]['content'] = "<@" + str(message.author.id) + ">  "
+                hashMessage[message.author.id]['partNum'] = 0     
                 
                 agent: AgentExecutor = get_agent(chat_ollama)
                 
-                hashMessage[message.author]['messages'].append(HumanMessage(content=mymessage))
+                hashMessage[message.author.id]['messages'].append(HumanMessage(content=mymessage))
                 skip = False
-                async for part in agent.astream({"input":hashMessage[message.author]['messages'][-1].content,
-                                                 "chat_history":hashMessage[message.author]['messages']}):
+                async for part in agent.astream({"input":hashMessage[message.author.id]['messages'][-1].content,
+                                                 "chat_history":hashMessage[message.author.id]['messages']}):
                     if part:
                         logger.info(part)
                         if 'output' in part:
-                            logger.info(part['output'])
                         # logger.info(part)
                         # # for deepseek
                             if part['output'] == "<think>":
@@ -196,34 +193,34 @@ class BotRoutine(commands.Bot):
                                 continue 
                             if skip:
                                 continue
-                            hashMessage[message.author]['partNum'] = hashMessage[message.author]['partNum'] + 1
-                            hashMessage[message.author]['content'] = hashMessage[message.author]['content'] + part['output']
-                            logger.info(hashMessage[message.author]['partNum'])
-                            if len(hashMessage[message.author]['messages']) > 70:
-                                hashMessage[message.author]['messages'].pop(12)
+                            hashMessage[message.author.id]['partNum'] = hashMessage[message.author.id]['partNum'] + 1
+                            hashMessage[message.author.id]['content'] = hashMessage[message.author.id]['content'] + part['output']
+                            logger.info(hashMessage[message.author.id]['partNum'])
+                            if len(hashMessage[message.author.id]['messages']) > 70:
+                                hashMessage[message.author.id]['messages'].pop(12)
                             if POST_TYPE == "Character":
                                 print("Character")
-                                print(len(hashMessage[message.author]['content']))
-                                if  len(hashMessage[message.author]['content']) > MAX_LENGTH:
-                                    await message.channel.send(hashMessage[message.author]['content'])
-                                    chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
-                                    hashMessage[message.author]['messages'].append(('assistant',chatmessage ) )
-                                    hashMessage[message.author]['content'] = ""
-                                    hashMessage[message.author]['partNum'] = 0
+                                print(len(hashMessage[message.author.id]['content']))
+                                if  len(hashMessage[message.author.id]['content']) > MAX_LENGTH:
+                                    await message.channel.send(hashMessage[message.author.id]['content'])
+                                    chatmessage = str(hashMessage[message.author.id]['content']) .replace("<@" + str(message.author.id) + ">","")
+                                    hashMessage[message.author.id]['messages'].append(AIMessage(content=chatmessage ) )
+                                    hashMessage[message.author.id]['content'] = ""
+                                    hashMessage[message.author.id]['partNum'] = 0
                             else:
-                                if  len(hashMessage[message.author]['partNum']) > MAX_LENGTH:
-                                    await message.channel.send(hashMessage[message.author]['content'])
-                                    chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
-                                    hashMessage[message.author]['messages'].append(AIMessage(content=chatmessage ) )
-                                    hashMessage[message.author]['content'] = ""
-                                    hashMessage[message.author]['partNum'] = 0
+                                if hashMessage[message.author.id]['partNum'] > MAX_LENGTH:
+                                    await message.channel.send(hashMessage[message.author.id]['content'])
+                                    chatmessage = str(hashMessage[message.author.id]['content']) .replace("<@" + str(message.author.id) + ">","")
+                                    hashMessage[message.author.id]['messages'].append(AIMessage(content=chatmessage ) )
+                                    hashMessage[message.author.id]['content'] = ""
+                                    hashMessage[message.author.id]['partNum'] = 0
+                
                                 
-                                
-                            await message.channel.send(hashMessage[message.author]['content'])
-                            chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
-                            hashMessage[message.author]['messages'].append(AIMessage(content=chatmessage ) )
-                            hashMessage[message.author]['content'] = ""
-                            hashMessage[message.author]['partNum'] = 0
+                            await message.channel.send(hashMessage[message.author.id]['content'])
+                            chatmessage = str(hashMessage[message.author.id]['content']) .replace("<@" + str(message.author.id) + ">","")
+                            hashMessage[message.author.id]['messages'].append(AIMessage(content=chatmessage ) )
+                            hashMessage[message.author.id]['content'] = ""
+                            hashMessage[message.author.id]['partNum'] = 0
                         else:
                             continue
                     

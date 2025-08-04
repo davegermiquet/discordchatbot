@@ -95,17 +95,17 @@ class CustomCommandCog(commands.Cog, name="Custom"):
     @commands.command()
     async def showcache(self, ctx):
         try:
-            if ctx.author  in hashMessage:
-                for i in hashMessage[ctx.author]['messages']:
-                    time.sleep(0.5)
+            if ctx.author.id in hashMessage:
+                for i in hashMessage[ctx.author.id]['messages']:
+                    await asyncio.sleep(0.5)
                     await ctx.author.send(i)
         except:
             logger.info("Oh no") 
 
     @commands.command()
     async def deletecache(self,ctx):
-        if ctx.author  in hashMessage:
-            hashMessage[ctx.author]['messages'] = hashMessage[ctx.author]['messages'][:13]
+        if ctx.author.id  in hashMessage:
+            hashMessage[ctx.author.id]['messages'] = hashMessage[ctx.author.id]['messages'][:13]
 
 class BotRoutine(commands.Bot):
     def __init__(self, *args, **kwargs):
@@ -126,8 +126,8 @@ class BotRoutine(commands.Bot):
                 mymessage = str(mymessage).replace("<@" + str(self.user.id) + ">","")
                 logger.info(message.author)
                 print(message)
-                if message.author not in hashMessage:
-                    hashMessage[message.author] = {
+                if message.author.id not in hashMessage:
+                    hashMessage[message.author.id] = {
                             "partNum" : 0,
                              "messages": [
                     { 'role': 'system',"content": "Your name is Emery.Your dad is Bob. Your mom is Samantha." } ,
@@ -148,11 +148,11 @@ class BotRoutine(commands.Bot):
                 ],
                             "content" : ""
                             }
-                hashMessage[message.author]['content'] = "<@" + str(message.author.id) + ">  "
-                hashMessage[message.author]['partNum'] = 0                            
-                hashMessage[message.author]['messages'].append(    {'role': 'user', 'content': mymessage })
+                hashMessage[message.author.id]['content'] = "<@" + str(message.author.id) + ">  "
+                hashMessage[message.author.id]['partNum'] = 0                            
+                hashMessage[message.author.id]['messages'].append(    {'role': 'user', 'content': mymessage })
                 skip = False
-                async for part in await ollamaclient.chat(model=use_model, messages=hashMessage[message.author]['messages']
+                async for part in await ollamaclient.chat(model=use_model, messages=hashMessage[message.author.id]['messages']
                         ,stream=True):
                     logger.info(part)
                     # for deepseek
@@ -163,29 +163,29 @@ class BotRoutine(commands.Bot):
                         continue 
                     if skip:
                         continue
-                    hashMessage[message.author]['partNum'] = hashMessage[message.author]['partNum'] + 1
-                    hashMessage[message.author]['content'] = hashMessage[message.author]['content'] + part['message']['content']
-                    logger.info(hashMessage[message.author]['partNum'])
-                    if len(hashMessage[message.author]['messages']) > 70:
-                        hashMessage[message.author]['messages'].pop(12)
+                    hashMessage[message.author.id]['partNum'] = hashMessage[message.author.id]['partNum'] + 1
+                    hashMessage[message.author.id]['content'] = hashMessage[message.author.id]['content'] + part['message']['content']
+                    logger.info(hashMessage[message.author.id]['partNum'])
+                    if len(hashMessage[message.author.id]['messages']) > 70:
+                        hashMessage[message.author.id]['messages'].pop(12)
                     if POST_TYPE == "Character":
                         print("Character")
-                        print(len(hashMessage[message.author]['content']))
-                        if  len(hashMessage[message.author]['content']) > MAX_LENGTH  or part['done'] == True:
-                            await message.channel.send(hashMessage[message.author]['content'])
-                            chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
-                            hashMessage[message.author]['messages'].append({'role':'assistant','content': chatmessage } )
-                            hashMessage[message.author]['content'] = ""
-                            hashMessage[message.author]['partNum'] = 0
-                            time.sleep(0.5)
+                        print(len(hashMessage[message.author.id]['content']))
+                        if  len(hashMessage[message.author.id]['content']) > MAX_LENGTH  or part['done'] == True:
+                            await message.channel.send(hashMessage[message.author.id]['content'])
+                            chatmessage = str(hashMessage[message.author.id]['content']) .replace("<@" + str(message.author.id) + ">","")
+                            hashMessage[message.author.id]['messages'].append({'role':'assistant','content': chatmessage } )
+                            hashMessage[message.author.id]['content'] = ""
+                            hashMessage[message.author.id]['partNum'] = 0
+                            await asyncio.sleep(0.5)
                     else:
-                        if  hashMessage[message.author]['partNum'] > MAX_LENGTH or part['done'] == True:
-                            await message.channel.send(hashMessage[message.author]['content'])
-                            chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
-                            hashMessage[message.author]['messages'].append({'role':'assistant','content': chatmessage } )
-                            hashMessage[message.author]['content'] = ""
-                            hashMessage[message.author]['partNum'] = 0
-                            time.sleep(0.5)
+                        if  hashMessage[message.author.id]['partNum'] > MAX_LENGTH or part['done'] == True:
+                            await message.channel.send(hashMessage[message.author.id]['content'])
+                            chatmessage = str(hashMessage[message.author.id]['content']) .replace("<@" + str(message.author.id) + ">","")
+                            hashMessage[message.author.id]['messages'].append({'role':'assistant','content': chatmessage } )
+                            hashMessage[message.author.id]['content'] = ""
+                            hashMessage[message.author.id]['partNum'] = 0
+                            await asyncio.sleep(0.5)
 
                    
 
