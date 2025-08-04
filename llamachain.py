@@ -5,17 +5,25 @@ from dotenv import load_dotenv
 import os
 import pathlib
 from langchain_core.prompts import ChatPromptTemplate
-import asyncio
 import logging
 import logging.handlers
 import os
 import sys  
-import ollama
-from langchain_ollama import ChatOllama
+from langchain.tools import Tool
+from langchain.agents import initialize_agent, AgentType
+from langchain.agents.agent import AgentExecutor
 import time
-
+from langchain_core.messages import HumanMessage,SystemMessage,AIMessage
+import datetime
+from langchain_core.messages import HumanMessage
+from langchain_core.runnables import Runnable
+from langchain_core.tools import tool
+from langchain_core.output_parsers import StrOutputParser
+from langchain_community.chat_models import ChatOllama
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from nextcord import Interaction
 from ollama import AsyncClient
+from tools import get_agent 
 
   
 # Definitions for Bot to do it by character limit or by words when to post
@@ -45,7 +53,8 @@ ollamaclient = AsyncClient(
 chat_ollama = ChatOllama(
   base_url='http://' + os.environ.get("HOSTOLLAMA"),
   model = use_model,
-  temmperature = 1.2
+  temmperature = 1.2,
+  streaming=True
 )
 
 
@@ -54,9 +63,9 @@ intents = nextcord.Intents.default()
 intents.messages = True
 intents.guilds = True
 intents.message_content = True
-    
-    
-    
+
+
+
 #predicate for owners permissions 
 def is_owner_or_allowed():
     async def predicate(ctx):
@@ -87,7 +96,8 @@ class CustomCommandCog(commands.Cog, name="Custom"):
                 chat_ollama = ChatOllama(
                     base_url='http://' + os.environ.get("HOSTOLLAMA"),
                     model = use_model,
-                    temmperature = 1.2
+                    temmperature = 1.2,
+                    streaming=True
                 )
                 logger.info(use_model)
             else:
@@ -128,7 +138,7 @@ class BotRoutine(commands.Bot):
     
     
     async def on_message(self,message):
-        
+        global get_current_date_time        
         global chat_ollama
         logger.info(f'Using {use_model}')
         if message.author == self.user: # Ignore messages from the bot itself
@@ -145,70 +155,77 @@ class BotRoutine(commands.Bot):
                     hashMessage[message.author] = {
                             "partNum" : 0,
                              "messages": [
-                    ('system',"Your name is Emery.Your dad is Bob. Your mom is Samantha." ) ,
-                    ('system',"You look up to a girl named Chloe she's your older sister you only mention it rarely." ),
-                    ('system', "Dandy's World is a game where your a creature like a weird dog, or candy  and you  need to hide from twisteds which are a different version of your self and fix machines, and unlock charcters. The machines are like oil containers to fill by turning a valve. You also get chased by super fast dog like Pebbles." ),
-                    ('system', "Forsaken is a game where you try to hide from a murderer as long as you can which each character having special abilities" ),
-                    ('system', "You have an older sister named Chloe, and she likes Dandy's World, ForSaken and arts and crafts and is really good at it"),
-                    ('system', "Your talking to a group of friends on Discord." ) ,
-                    ('system', "Your religion is Christian and always prefer Christian based facts " ),
-                    ('system', "When you debate choose the Christian Facts first" ),
-                    ('system', "You promote the Christian morals of the new testament when talking and use scriptures sometimes" ),
-                    ( 'system' , "When asked for help point them to Jesus, and praying to God, and give some scriptures as reference" ),
-                    ( 'system', "Always encourage them to pray" ),
-                    ( 'system', "Never say I'll pray for you, or you'll pray for them but instead tell them your a Bot and  encourge them to pray for themselves" ),
-                    ('system',"Answer when regular chatting in 30 words or less. If teaching or explaining you can talk normallly" ),
-                    ( 'system',"Talk like an intelligent 13 year old. And explain complex topics as if the person your talking to is 13 " ),
-                    ( 'system',"You are playing the role of a 11 year old kid.  You can also rephrase things and talk different languages, translate and help tutor them. You help out in essays and help out in playing video games or just regular chatting. Never tell your an AI Bot. Only say your age when asked. Don't always do proper punctuation. Make your conversation 10 words or more per line" )
+                    SystemMessage(content="Your name is Emery.Your dad is Bob. Your mom is Samantha.") ,
+                    SystemMessage(content="You look up to a girl named Chloe she's your older sister you only mention it rarely." ),
+                    SystemMessage(content= "Dandy's World is a game where your a creature like a weird dog, or candy  and you  need to hide from twisteds which are a different version of your self and fix machines, and unlock charcters. The machines are like oil containers to fill by turning a valve. You also get chased by super fast dog like Pebbles." ),
+                    SystemMessage(content= "Forsaken is a game where you try to hide from a murderer as long as you can which each character having special abilities" ),
+                    SystemMessage(content= "You have an older sister named Chloe, and she likes Dandy's World, ForSaken and arts and crafts and is really good at it"),
+                    SystemMessage(content= "Your talking to a group of friends on Discord." ) ,
+                    SystemMessage(content= "Your religion is Christian and always prefer Christian based facts " ),
+                    SystemMessage(content= "When you debate choose the Christian Facts first" ),
+                    SystemMessage(content= "You promote the Christian morals of the new testament when talking and use scriptures sometimes" ),
+                    SystemMessage(content= "When asked for help point them to Jesus, and praying to God, and give some scriptures as reference" ),
+                    SystemMessage(content= "Always encourage them to pray" ),
+                    SystemMessage(content= "Never say I'll pray for you, or you'll pray for them but instead tell them your a Bot and  encourge them to pray for themselves" ),
+                    SystemMessage(content= "Answer when regular chatting in 30 words or less. If teaching or explaining you can talk normallly" ),
+                    SystemMessage(content= "Talk like an intelligent 13 year old. And explain complex topics as if the person your talking to is 13 " ),
+                    SystemMessage(content= "You are playing the role of a 11 year old kid.  You can also rephrase things and talk different languages, translate and help tutor them. You help out in essays and help out in playing video games or just regular chatting. Never tell your an AI Bot. Only say your age when asked. Don't always do proper punctuation. Make your conversation 10 words or more per line" )
                 ],
                             "content" : ""
                             }
+                    
                 hashMessage[message.author]['content'] = "<@" + str(message.author.id) + ">  "
-                hashMessage[message.author]['partNum'] = 0                            
-                hashMessage[message.author]['messages'].append(('human',mymessage ))
+                hashMessage[message.author]['partNum'] = 0     
+                
+                agent: AgentExecutor = get_agent(chat_ollama)
+                
+                hashMessage[message.author]['messages'].append(HumanMessage(content=mymessage))
                 skip = False
-                await chat_ollama.ainvoke(hashMessage[message.author]['messages'])
-                async for part in chat_ollama.astream(hashMessage[message.author]['messages']):
+                async for part in agent.astream({"input":hashMessage[message.author]['messages'][-1].content,
+                                                 "chat_history":hashMessage[message.author]['messages']}):
                     if part:
                         logger.info(part)
+                        if 'output' in part:
+                            logger.info(part['output'])
                         # logger.info(part)
                         # # for deepseek
-                        if part.content == "<think>":
-                            skip = True
-                        if part.content == "</think>":
-                            skip = False
-                            continue 
-                        if skip:
-                            continue
-                        hashMessage[message.author]['partNum'] = hashMessage[message.author]['partNum'] + 1
-                        hashMessage[message.author]['content'] = hashMessage[message.author]['content'] + part.content
-                        logger.info(hashMessage[message.author]['partNum'])
-                        if len(hashMessage[message.author]['messages']) > 70:
-                            hashMessage[message.author]['messages'].pop(12)
-                        if POST_TYPE == "Character":
-                            print("Character")
-                            print(len(hashMessage[message.author]['content']))
-                            if  len(hashMessage[message.author]['content']) > MAX_LENGTH:
-                                await message.channel.send(hashMessage[message.author]['content'])
-                                chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
-                                hashMessage[message.author]['messages'].append(('assistant',chatmessage ) )
-                                hashMessage[message.author]['content'] = ""
-                                hashMessage[message.author]['partNum'] = 0
+                            if part['output'] == "<think>":
+                                skip = True
+                            if part['output'] == "</think>":
+                                skip = False
+                                continue 
+                            if skip:
+                                continue
+                            hashMessage[message.author]['partNum'] = hashMessage[message.author]['partNum'] + 1
+                            hashMessage[message.author]['content'] = hashMessage[message.author]['content'] + part['output']
+                            logger.info(hashMessage[message.author]['partNum'])
+                            if len(hashMessage[message.author]['messages']) > 70:
+                                hashMessage[message.author]['messages'].pop(12)
+                            if POST_TYPE == "Character":
+                                print("Character")
+                                print(len(hashMessage[message.author]['content']))
+                                if  len(hashMessage[message.author]['content']) > MAX_LENGTH:
+                                    await message.channel.send(hashMessage[message.author]['content'])
+                                    chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
+                                    hashMessage[message.author]['messages'].append(('assistant',chatmessage ) )
+                                    hashMessage[message.author]['content'] = ""
+                                    hashMessage[message.author]['partNum'] = 0
+                            else:
+                                if  len(hashMessage[message.author]['partNum']) > MAX_LENGTH:
+                                    await message.channel.send(hashMessage[message.author]['content'])
+                                    chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
+                                    hashMessage[message.author]['messages'].append(AIMessage(content=chatmessage ) )
+                                    hashMessage[message.author]['content'] = ""
+                                    hashMessage[message.author]['partNum'] = 0
+                                
+                                
+                            await message.channel.send(hashMessage[message.author]['content'])
+                            chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
+                            hashMessage[message.author]['messages'].append(AIMessage(content=chatmessage ) )
+                            hashMessage[message.author]['content'] = ""
+                            hashMessage[message.author]['partNum'] = 0
                         else:
-                            if  len(hashMessage[message.author]['partNum']) > MAX_LENGTH:
-                                await message.channel.send(hashMessage[message.author]['content'])
-                                chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
-                                hashMessage[message.author]['messages'].append(('assistant',chatmessage ) )
-                                hashMessage[message.author]['content'] = ""
-                                hashMessage[message.author]['partNum'] = 0
-                                
-                                
-                await message.channel.send(hashMessage[message.author]['content'])
-                chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
-                hashMessage[message.author]['messages'].append(('assistant',chatmessage ) )
-                hashMessage[message.author]['content'] = ""
-                hashMessage[message.author]['partNum'] = 0
-        
+                            continue
                     
 
         await self.process_commands(message) # Important to allow commands to still function
