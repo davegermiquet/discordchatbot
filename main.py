@@ -179,7 +179,7 @@ class BotRoutine(commands.Bot):
                             hashMessage[message.author]['partNum'] = 0
                             time.sleep(0.5)
                     else:
-                        if  len(hashMessage[message.author]['partNum']) > MAX_LENGTH or part['done'] == True:
+                        if  hashMessage[message.author]['partNum'] > MAX_LENGTH or part['done'] == True:
                             await message.channel.send(hashMessage[message.author]['content'])
                             chatmessage = str(hashMessage[message.author]['content']) .replace("<@" + str(message.author.id) + ">","")
                             hashMessage[message.author]['messages'].append({'role':'assistant','content': chatmessage } )
