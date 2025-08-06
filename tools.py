@@ -3,10 +3,11 @@ from langchain.tools import Tool
 import datetime
 from langchain_core.messages import HumanMessage,SystemMessage,AIMessage,ToolMessage
 import re
+from shared import get_use_model
 
 def whats_your_current_model(_:str) -> str:
-    from shared import use_model
-    return f"The model is {use_model}"
+    global get_use_model
+    return f"The model is {get_use_model()}"
 def get_current_date_time(_:str) -> str:
     """Returns the current date and time."""
     print("INSIDE DATE TIME")

@@ -24,7 +24,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from nextcord import Interaction
 from ollama import AsyncClient
 from tools import get_agent 
-from shared import use_model
+from shared import get_use_model,set_use_model
   
 # Definitions for Bot to do it by character limit or by words when to post
 
@@ -52,7 +52,7 @@ ollamaclient = AsyncClient(
 
 chat_ollama = ChatOllama(
   base_url='http://' + os.environ.get("HOSTOLLAMA"),
-  model = use_model,
+  model = get_use_model(),
   temperature = 1.2,
   streaming=True
 )
@@ -84,7 +84,8 @@ class CustomCommandCog(commands.Cog, name="Custom"):
     @is_owner_or_allowed()
     async def usemodel(self, ctx, model_name_to_use: str):
         global chat_ollama
-        global use_model 
+        global get_use_model
+        global set_use_model
         models = []
         try:
             list = await ollamaclient.list()
@@ -92,7 +93,8 @@ class CustomCommandCog(commands.Cog, name="Custom"):
                 models.append(model['model']) 
             if model_name_to_use in models:
                 await ctx.author.send(f"Now using, {model_name_to_use}") 
-                use_model = model_name_to_use
+                set_use_model(model_name_to_use)
+                use_model = get_use_model()
                 chat_ollama = ChatOllama(
                     base_url='http://' + os.environ.get("HOSTOLLAMA"),
                     model = use_model,
@@ -139,7 +141,8 @@ class BotRoutine(commands.Bot):
     
     async def on_message(self,message):
         global chat_ollama
-        logger.info(f'Using {use_model}')
+        global get_use_model
+        logger.info(f'Using {get_use_model()}')
         if message.author == self.user: # Ignore messages from the bot itself
             return
 
