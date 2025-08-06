@@ -53,13 +53,7 @@ class CustomCommandCog(commands.Cog, name="Custom"):
             if model_name_to_use in models:
                 await ctx.author.send(f"Now using, {model_name_to_use}") 
                 set_use_model(model_name_to_use)
-                use_model = get_use_model()
-                self.chat_ollama = create_chat_ollama(
-                    base_url=get_url_for_ollama(),
-                    model = use_model,
-                    temperature = 1.2
-                )
-                self.logger.info(use_model)
+                self.logger.info(get_use_model())
             else:
                 await ctx.author.send(f"That model not found")
         except Exception as ex:
@@ -104,12 +98,18 @@ class BotRoutine(commands.Bot):
     async def on_message(self,message):
         global get_use_model
         self.logger.info(f'Using {get_use_model()}')
+
         if message.author == self.user: # Ignore messages from the bot itself
             return
 
         # Check for user mentions
         if message.mentions:
             if self.user in message.mentions:
+                self.chat_ollama = create_chat_ollama(
+                    base_url=get_url_for_ollama(),
+                    model = get_use_model(),
+                    temperature = 1.2
+                )
                 mymessage = message.content
                 mymessage = str(mymessage).replace("<@" + str(self.user.id) + ">","")
                 self.logger.info(message.author)
