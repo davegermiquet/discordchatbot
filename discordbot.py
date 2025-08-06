@@ -84,7 +84,7 @@ class CustomCommandCog(commands.Cog, name="Custom"):
     @commands.command()
     async def deletecache(self,ctx):
         if ctx.author.id in self.hashMessage:
-            self.self.hashMessage[ctx.author.id]['messages'] = self.hashMessage[ctx.author.id]['messages'] = []
+            self.hashMessage[ctx.author.id]['messages'] = self.hashMessage[ctx.author.id]['messages'] = []
 
 class BotRoutine(commands.Bot):
     def __init__(self, command_prefix='!',intents=None,ollamaclient=None,chat_ollama=None,logger=None):
