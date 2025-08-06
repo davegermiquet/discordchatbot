@@ -3,8 +3,31 @@ from langchain.tools import Tool
 import datetime
 from langchain_core.messages import HumanMessage,SystemMessage,AIMessage,ToolMessage
 import re
-from shared import get_use_model
+from langchain_ollama.chat_models import ChatOllama
+from ollama import AsyncClient
 
+use_model = "gemma3:12b"
+def get_use_model():
+    global use_model
+    return use_model
+
+def set_use_model(model):
+    global use_model
+    use_model = model
+    
+
+def create_ollamaclient (host = "None"):
+    return AsyncClient(host=host)
+
+def create_chat_ollama(base_url=None,model=None,temperature=None):
+    return ChatOllama(
+        base_url=base_url,
+        model = model,
+        temperature = temperature,
+        streaming=True
+        )
+
+    
 def whats_your_current_model(_:str) -> str:
     global get_use_model
     return f"The model is {get_use_model()}"
@@ -73,7 +96,6 @@ class MyCustomAgent:
                         if skip:
                             continue
                         content += inner_part.content
-                      
                         # Check if Final Answer in inner stream to break early
                         if re.search(r"^Final Answer:\s*(.*)", content, re.MULTILINE):
                             print("Final Answer found in inner stream, breaking")
