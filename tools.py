@@ -65,9 +65,7 @@ class MyCustomAgent:
 
                     # After inner stream ends, reset content to avoid mixing old tokens
                     content = ""
-                    continue  # Continue outer stream if needed (or break)
-            if final_answer_match_inner:
-                print("Final Answer found in inner")
+                    break
             if final_answer_match:
                 print("Final Answer found in outer stream, breaking")
                 yield part
