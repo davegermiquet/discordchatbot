@@ -173,13 +173,6 @@ class BotRoutine(commands.Bot):
                         if part.content:
                         # logger.info(part)
                         # # for deepseek
-                            if part.content == "<think>":
-                                skip = True
-                            if part.content == "</think>":
-                                skip = False
-                                continue 
-                            if skip:
-                                continue
                             hashMessage[message.author.id]['partNum'] = hashMessage[message.author.id]['partNum'] + 1
                             hashMessage[message.author.id]['content'] = hashMessage[message.author.id]['content'] + part.content
                             logger.info(hashMessage[message.author.id]['partNum'])

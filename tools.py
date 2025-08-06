@@ -34,16 +34,29 @@ class MyCustomAgent:
         self.chat_history.append(self.prompt)
         self.chat_history.append(HumanMessage(content=message['input']))
         content = ""
-
+        skip = False
+        pattern = re.compile(r"^(Action:|Final Answer:|Observation:| ?Thought:).+",re.MULTILINE)
         async for part in self.llm.astream(self.chat_history):
             print(f"Outer stream part: {part.content}")
-
+            if part.content == "<think>":
+                skip = True
+            if part.content == "</think>":
+                skip = False
+                continue 
+            if skip:
+                continue
             content += part.content
-
+            print(content)
             # Detect Action and Final Answer lines with multiline regex
             action_match = re.search(r"^Action:\s*(.*)", content, re.MULTILINE)
             final_answer_match = re.search(r"^Final Answer:\s*(.*)", content, re.MULTILINE)
-
+            print(len(content))
+            if len(content) > 20: # catch all
+                match = pattern.search(content)
+                print(match)
+                if not match:
+                    print("inside")
+                    yield part
             if action_match:
                 tool_name = action_match.group(1).strip()
                 if tool_name in self.tools:
@@ -54,23 +67,35 @@ class MyCustomAgent:
                     # Append tool output as ToolMessage so LLM gets it
                     self.chat_history.append(HumanMessage(content=response))
                     content = ""  # reset the buffer before continuing
-
+                    skip =False
                     # Start a new stream with updated history including tool response
                     async for inner_part in self.llm.astream(self.chat_history):
                         print(f"Inner stream part: {inner_part.content}")
+                        if inner_part.content == "<think>":
+                            skip = True
+                        if inner_part.content == "</think>":
+                            skip = False
+                            continue 
+                        if skip:
+                            continue
                         content += inner_part.content
-
+                      
                         # Check if Final Answer in inner stream to break early
                         if re.search(r"^Final Answer:\s*(.*)", content, re.MULTILINE):
                             print("Final Answer found in inner stream, breaking")
                             yield inner_part
-
+                        if len(content) > 20: # catch all if it doesnt have any special response
+                            match =  pattern.search(content)
+                            print(match)
+                            if not match:
+                                yield inner_part
                     # After inner stream ends, reset content to avoid mixing old tokens
                     content = ""
                     break
             if final_answer_match:
                 print("Final Answer found in outer stream, breaking")
                 yield part
+            
 
 
            
@@ -82,12 +107,12 @@ third_party_tools = [
     Tool(
         name="CurrentModel",
         func=whats_your_current_model,
-        description="Returns the current model of the LLM",
+        description="When you ask for the current LLM model",
     ),
      Tool(
         name="GetBotFramework",
         func=get_what_my_bot_framework_is_in,
-        description="Returns the bot framework and programming language.The input is ignored",
+        description="When asked for what program the application is in",
     ),
     Tool(
         name="get_current_date_time",
