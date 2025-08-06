@@ -1,9 +1,12 @@
 from langchain.agents import AgentType
 from langchain.tools import Tool
 import datetime
-import re
 from langchain_core.messages import HumanMessage,SystemMessage,AIMessage,ToolMessage
+import re
 
+def whats_your_current_model(_:str) -> str:
+    from shared import use_model
+    return f"The model is {use_model}"
 def get_current_date_time(_:str) -> str:
     """Returns the current date and time."""
     print("INSIDE DATE TIME")
@@ -30,7 +33,6 @@ class MyCustomAgent:
         self.chat_history.append(self.prompt)
         self.chat_history.append(HumanMessage(content=message['input']))
         content = ""
-        final_answer_match_inner = False
 
         async for part in self.llm.astream(self.chat_history):
             print(f"Outer stream part: {part.content}")
@@ -60,7 +62,6 @@ class MyCustomAgent:
                         # Check if Final Answer in inner stream to break early
                         if re.search(r"^Final Answer:\s*(.*)", content, re.MULTILINE):
                             print("Final Answer found in inner stream, breaking")
-                            final_answer_match_inner = True
                             yield inner_part
 
                     # After inner stream ends, reset content to avoid mixing old tokens
@@ -77,6 +78,11 @@ class MyCustomAgent:
     
     
 third_party_tools = [
+    Tool(
+        name="CurrentModel",
+        func=whats_your_current_model,
+        description="Returns the current model of the LLM",
+    ),
      Tool(
         name="GetBotFramework",
         func=get_what_my_bot_framework_is_in,
@@ -85,7 +91,7 @@ third_party_tools = [
     Tool(
         name="get_current_date_time",
         func=get_current_date_time,
-        description="Returns the current date and time. Input is ignored.",
+        description="When user asks for current date or time or both.",
     ),
     Tool(
         name="GetCurrentNewsOfIsrael",
@@ -93,5 +99,13 @@ third_party_tools = [
         description="Return the current news of Israel. Do Not Answer this yourself and display the output.The input can be blank"
     )
 ]
-def get_agent(llm,prompt):   
+def get_agent(llm,system_message):   
+    tool_names = [ tool.name for tool in third_party_tools ]
+    complete_description = ""
+    for tool in third_party_tools:
+        complete_description = complete_description + f"""
+        tool: {tool.name}
+        when_to_use: {tool.description}
+        """
+    prompt = system_message.format(tool_names=tool_names,complete_description=complete_description)
     return MyCustomAgent(llm,prompt,third_party_tools)

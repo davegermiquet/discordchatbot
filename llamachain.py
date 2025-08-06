@@ -15,7 +15,7 @@ import myprompts
 from langchain.agents import initialize_agent, AgentType
 from langchain.agents.agent import AgentExecutor
 import time
-from langchain_core.messages import HumanMessage,SystemMessage,AIMessage
+from langchain_core.messages import HumanMessage,AIMessage
 from langchain_core.runnables import Runnable
 from langchain_core.tools import tool
 from langchain_core.output_parsers import StrOutputParser
@@ -24,7 +24,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from nextcord import Interaction
 from ollama import AsyncClient
 from tools import get_agent 
-
+from shared import use_model
   
 # Definitions for Bot to do it by character limit or by words when to post
 
@@ -45,7 +45,7 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 load_dotenv()
 
 TOKEN=os.environ.get("BOTTOKEN")
-use_model = "gemma3:12b"
+
 ollamaclient = AsyncClient(
   host='http://' + os.environ.get("HOSTOLLAMA")
 ) 
@@ -130,7 +130,7 @@ class CustomCommandCog(commands.Cog, name="Custom"):
     @commands.command()
     async def deletecache(self,ctx):
         if ctx.author.id in hashMessage:
-            hashMessage[ctx.author.id]['messages'] = hashMessage[ctx.author.id]['messages'][:13]
+            hashMessage[ctx.author.id]['messages'] = hashMessage[ctx.author.id]['messages'] = []
 
 class BotRoutine(commands.Bot):
     def __init__(self, *args, **kwargs):
@@ -160,9 +160,9 @@ class BotRoutine(commands.Bot):
                 hashMessage[message.author.id]['content'] = "<@" + str(message.author.id) + ">  "
                 hashMessage[message.author.id]['partNum'] = 0     
                 
-                agent = get_agent(chat_ollama,myprompts.system_message)
+                agent = get_agent(chat_ollama,myprompts.system_message_prompt)
                 
-                hashMessage[message.author.id]['messages'].append(HumanMessage(content=mymessage))
+                hashMessage[message.author.id]['messages'].append(HumanMessage(content="Question:" + mymessage))
                 skip = False
                 async for part in agent.astream({ "input": hashMessage[message.author.id]['messages'][-1].content,"chat_history" : hashMessage[message.author.id]['messages']}):
                     if part:
@@ -193,18 +193,21 @@ class BotRoutine(commands.Bot):
                                     hashMessage[message.author.id]['partNum'] = 0
                             else:
                                 if hashMessage[message.author.id]['partNum'] > MAX_LENGTH:
+                     
                                     await message.channel.send(hashMessage[message.author.id]['content'])
                                     chatmessage = str(hashMessage[message.author.id]['content']) .replace("<@" + str(message.author.id) + ">","")
                                     hashMessage[message.author.id]['messages'].append(AIMessage(content=chatmessage ) )
                                     hashMessage[message.author.id]['content'] = ""
                                     hashMessage[message.author.id]['partNum'] = 0
                 
-                                
-                await message.channel.send(hashMessage[message.author.id]['content'])
-                chatmessage = str(hashMessage[message.author.id]['content']) .replace("<@" + str(message.author.id) + ">","")
-                hashMessage[message.author.id]['messages'].append(AIMessage(content=chatmessage ) )
-                hashMessage[message.author.id]['content'] = ""
-                hashMessage[message.author.id]['partNum'] = 0
+                if hashMessage[message.author.id]['content'].strip() == "":
+                    pass
+                else:          
+                    await message.channel.send(hashMessage[message.author.id]['content'])
+                    chatmessage = str(hashMessage[message.author.id]['content']) .replace("<@" + str(message.author.id) + ">","")
+                    hashMessage[message.author.id]['messages'].append(AIMessage(content=chatmessage ) )
+                    hashMessage[message.author.id]['content'] = ""
+                    hashMessage[message.author.id]['partNum'] = 0
                     
 
         await self.process_commands(message) # Important to allow commands to still function
