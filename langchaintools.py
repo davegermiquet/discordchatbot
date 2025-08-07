@@ -213,9 +213,10 @@ class MyCustomAgent:
     async def astream(self, message):
         self.chat_history.append(self.prompt)
         self.chat_history.append(HumanMessage(content=message['input']))
-        content = ""
+        match_no_action = True  #how to see if map for action was called
         skip = False
-        pattern = re.compile(r"^(Action:|Final Answer:|Observation:| ?Thought:).+",re.MULTILINE)
+        content = ""
+        pattern = re.compile(r"^(Action:|Final ?Answer:|Observation:|Action Input:| {0,2}Thought:).*",re.MULTILINE)
         async for part in self.llm.astream(self.chat_history):
             print(f"Outer stream part: {part.content}")
             if part.content == "<think>":
@@ -227,11 +228,12 @@ class MyCustomAgent:
                 continue
             content += part.content
             print(content)
+            print(len(content))
+
             # Detect Action and Final Answer lines with multiline regex
             action_match = re.search(r"^Action:\s*(.*)", content, re.MULTILINE)
             action_match_argument = re.search(r"^Action Input:\s*(.*)", content, re.MULTILINE)
-            final_answer_match = re.search(r"^Final Answer:\s*(.*)", content, re.MULTILINE)
-            print(len(content))
+            final_answer_match = re.search(r"^Final ?Answer:\s*(.*)", content, re.MULTILINE)
             if action_match:
                 tool_argument = ""
                 if action_match_argument:
@@ -248,12 +250,14 @@ class MyCustomAgent:
                     print(response)
                     # Append tool output as ToolMessage so LLM gets it
                     self.chat_history.append(HumanMessage(content=response))
+                    print("Resetting content before async")
                     content = ""  # reset the buffer before continuing
                     skip =False
+                    match_no_action_inner = True # Only share part if there is no Final Answer or any type of tagging
                     # Start a new stream with updated history including tool response
                     async for inner_part in self.llm.astream(self.chat_history):
                         print(f"Inner stream part: {inner_part.content}")
-                        if inner_part.content == "<think>":
+                        if inner_part.content == "<tlhink>":
                             skip = True
                         if inner_part.content == "</think>":
                             skip = False
@@ -262,23 +266,41 @@ class MyCustomAgent:
                             continue
                         content += inner_part.content
                         # Check if Final Answer in inner stream to break early
-                        if re.search(r"^Final Answer:\s*(.*)", content, re.MULTILINE):
+                        if re.search(r"^Final ?Answer:\s*(.*)", content, re.MULTILINE):
                             print("Final Answer found in inner stream, breaking")
                             yield inner_part
-                        if len(content) > 20: # catch all if it doesnt have any special response
-                            match =  pattern.search(content)
-                            print(match)
-                            if not match:
-                                yield inner_part
+                        if ' ' in content.lstrip(): # catch all
+                            match_no_action_inner = pattern.search(content)
+                            if not match_no_action:
+                                print(len(content.split(' ')))
+                                if len(content.split(' ')) == 2 and ' ' in inner_part.content: #get left over buffer and make sure its not duplicate
+                                    print(content)
+                                    print(f'*{inner_part.content}*')
+                                    yield CustomContent(content=content.split(' ')[0] + " " + inner_part.content)
+                                else:
+                                    print(f"*{inner_part.content}*")
+                                    yield innert_part
+
                     # After inner stream ends, reset content to avoid mixing old tokens
+                    print("Resetting content")
                     content = ""
                     break
-            if len(content) > 20: # catch all
-                match = pattern.search(content)
-                print(match)
-                if not match:
-                    print("inside")
-                    yield part
+            if ' ' in content.lstrip(): # catch all
+                match_no_action = pattern.search(content)
+                print(match_no_action)
+
+                if not match_no_action:
+                    print(len(content.split(' ')))
+                    if len(content.split(' ')) == 2 and ' ' in part.content:
+                        print(content)
+                        print(f'*{part.content}*')
+                        yield CustomContent(content=content.split(' ')[0] + " " + part.content)
+                    else:
+                        print(f"*{part.content}*")
+                        yield part
+
+
+
             if final_answer_match:
                 print("Final Answer found in outer stream, breaking")
                 yield part
