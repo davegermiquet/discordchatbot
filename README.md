@@ -17,6 +17,8 @@ pip install langchain-ollama
 pip install langchain-community pypdf
 pip install -qU langchain-core
 pip install langchain langchain-community langchainhub ollama
+pip install discord
+
 
 
 

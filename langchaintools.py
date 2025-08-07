@@ -29,6 +29,11 @@ def create_chat_ollama(base_url=None,model=None,temperature=None):
         streaming=True
         )
 
+async def get_message_history(bot,_:str) -> str:
+    content = ""
+    async for message in bot['message'].channel.history(limit=300):  # You can change limit or use before/after
+        content = content + message.content
+    return f'Please summarize the following content {content}'
 
 def get_discord_server_members(bot,_:str) -> str:
     guild_members = [ member.name for member in bot['message'].guild.members if member.status == discord.Status.online ]
@@ -59,6 +64,11 @@ def get_what_my_bot_framework_is_in(bot,_:str) -> str:
 
     
 third_party_tools = [
+     Tool(
+        name ="Discord_Message_History",
+        func=get_message_history,
+        description="When the user asks to summarize the conversation of the discord channel. Summarize the conversation",
+    ),
     Tool(
         name ="Discord_Server_Members",
         func=get_discord_server_members,
@@ -160,7 +170,8 @@ class MyCustomAgent:
                     print(f"Calling tool: {tool_name}")
                     response = self.tool_engine.run_tool(tool_name,tool_argument)
                     if inspect.iscoroutine(response):
-                        await response
+                        response =  await self.tool_engine.run_tool(tool_name,tool_argument)
+                        
                     response = f"Tool {tool_name} returned: {response}"
                     print(response)
                     # Append tool output as ToolMessage so LLM gets it
