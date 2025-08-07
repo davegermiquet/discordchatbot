@@ -271,7 +271,7 @@ class MyCustomAgent:
                             yield inner_part
                         if ' ' in content.lstrip(): # catch all
                             match_no_action_inner = pattern.search(content)
-                            if not match_no_action:
+                            if not match_no_action_inner:
                                 print(len(content.split(' ')))
                                 if len(content.split(' ')) == 2 and ' ' in inner_part.content: #get left over buffer and make sure its not duplicate
                                     print(content)
