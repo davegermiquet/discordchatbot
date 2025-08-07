@@ -57,7 +57,7 @@ def brawl_stars_ranking_for_countries(bot,_:str) -> str:
         brawlclient = brawlstats.Client(token=BRAWLTOKEN)
         content = ""
         print(country)
-        content_array = brawlclient.get_rankings(ranking="clubs",region=country,limit=20)
+        content_array = brawlclient.get_rankings(ranking="clubs",region=country,limit=15)
         print(content_array)
         for single in content_array:
             print(single)
