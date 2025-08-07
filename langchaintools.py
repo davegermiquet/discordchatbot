@@ -39,7 +39,7 @@ async def get_message_history(bot,_:str) -> str:
     return f'Please summarize the following content {content}'
 
 def brawl_stars_stats_for_tag(bot,_:str) -> str:
-
+    content = "Sorry can't fidn user id"
     BRAWLTOKEN=os.environ.get("BRAWLAPI")
     brawlclient = brawlstats.Client(token=BRAWLTOKEN)
     if "#" in _[:2]:
@@ -58,8 +58,9 @@ def brawl_stars_stats_for_tag(bot,_:str) -> str:
         if response_gotten.brawlers:
             top = response_gotten.brawlers[0]
             content = content + f"Best brawler: {top.name} Trophies {top.trophies}"
-        else: 
-            content = "invalid tag"
+    else: 
+        content = "invalid tag"
+        
     return f'{content}'
 
 
@@ -96,12 +97,12 @@ def brawl_stars_ranking_for_countries(bot,_:str) -> str:
 
 
 def get_discord_server_members(bot,_:str) -> str:
-    guild_members = [ member.name for member in bot['message'].guild.members if member.status == discord.Status.online ]
+    guild_members = [ member.name for member in bot['message'].guild.members  ]
     all_guild_members = " ".join(guild_members)
     return f'The list of members on this channel on server are {all_guild_members}'
     
 def get_discord_online_server_members(bot,_:str) -> str:
-    guild_members = [ member.name for member in bot['message'].guild.members ]
+    guild_members = [ member.name for member in bot['message'].guild.members if member.status == discord.Status.online ]
     all_guild_members = " ".join(guild_members)
     return f'The list of members on this channel on server are {all_guild_members}'
 
