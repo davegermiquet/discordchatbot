@@ -102,7 +102,7 @@ def get_discord_server_members(bot,_:str) -> str:
     return f'The list of members on this channel on server are {all_guild_members}'
     
 def get_discord_online_server_members(bot,_:str) -> str:
-    guild_members = [ member.name for member in bot['message'].guild.members if member.status == discord.Status.online ]
+    guild_members = [ member.name for member in bot['message'].guild.members if member.status == discord.Status.online or discord.Status.dnd or discord.Status.idle ]
     all_guild_members = " ".join(guild_members)
     return f'The list of members on this channel on server are {all_guild_members}'
 
