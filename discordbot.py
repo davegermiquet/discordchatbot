@@ -127,16 +127,16 @@ class BotRoutine(commands.Bot):
                 self.hashMessage[message.author.id]['partNum'] = 0     
                 
                 agent = get_agent(self.chat_ollama,myprompts.system_message_prompt,{ "message": message, "bot" : self })
+                mycontent = []
                 if message.attachments:
-                    if message.attachments[0].content_type and message.attachments[0].content_type.startswith("image/"):
-                        image_bytes = await message.attachments[0].read()
-                        image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                        print("inside pic")
-                    
-                if message.attachments:
-                    self.hashMessage[message.author.id]['messages'].append(HumanMessage( content = [ {"type": "text","text":f"Question: {mymessage}"} ,{"type": "image_url", "image_url": f"data:image/jpeg;base64,{image_base64}"}]))
-                else:
-                    self.hashMessage[message.author.id]['messages'].append(HumanMessage(content=f"Question: {mymessage}"))
+                    for attachment in message.attachments:
+                        if attachment.content_type and attachment.content_type.startswith("image/"):
+                            image_bytes = await attachment.read()
+                            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                            mycontent.append({"type": "image_url", "image_url": f"data:image/jpeg;base64,{image_base64}"})
+                            
+                mycontent.append({"type": "text","text":f"Question: {mymessage}"})  
+                self.hashMessage[message.author.id]['messages'].append(HumanMessage(content=mycontent))
 
                 skip = False
                 async for part in agent.astream({ "input": self.hashMessage[message.author.id]['messages'][-1].content,"chat_history" : self.hashMessage[message.author.id]['messages']}):
