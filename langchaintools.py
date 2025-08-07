@@ -7,6 +7,9 @@ from langchain_ollama.chat_models import ChatOllama
 from ollama import AsyncClient
 import inspect
 import discord
+import brawlstats
+import os
+import json
 
 use_model = "gemma3:12b"
 def get_use_model():
@@ -34,6 +37,40 @@ async def get_message_history(bot,_:str) -> str:
     async for message in bot['message'].channel.history(limit=300):  # You can change limit or use before/after
         content = content + message.content
     return f'Please summarize the following content {content}'
+
+
+
+def brawl_stars_ranking_for_countries(bot,_:str) -> str:
+    def get_country(x):
+        print(x)
+        return {'canada':'CA',
+                'united states': 'US',
+                'england':'GB'}.get(x.lower(),"NotFound").upper()
+
+    BRAWLTOKEN=os.environ.get("BRAWLAPI")
+    country = get_country(_)
+    print(_)
+    print(country)
+    if country == "NOTFOUND":
+        content = "Sorry that country isn't found informed the developer"
+    else:
+        brawlclient = brawlstats.Client(token=BRAWLTOKEN)
+        content = ""
+        print(country)
+        content_array = brawlclient.get_rankings(ranking="clubs",region=country,limit=20)
+        print(content_array)
+        for single in content_array:
+            print(single)
+            singleContent = f''' Tag: {single.tag}	
+                            Name: {single.name}
+                            Trophies: {single.trophies}
+                            Rank: {single.rank}
+                            MemberCount: {single.memberCount}
+                            BadgeID: {single.badgeId}
+                        '''
+            content = content + singleContent
+    return f'{content}'
+
 
 def get_discord_server_members(bot,_:str) -> str:
     guild_members = [ member.name for member in bot['message'].guild.members if member.status == discord.Status.online ]
@@ -64,6 +101,11 @@ def get_what_my_bot_framework_is_in(bot,_:str) -> str:
 
     
 third_party_tools = [
+     Tool(
+        name ="BrawlStarsRankingforCountries",
+        func=brawl_stars_ranking_for_countries,
+        description="When the user asks to rank the brawl stars country taking the following country as input."
+    ),
      Tool(
         name ="Discord_Message_History",
         func=get_message_history,

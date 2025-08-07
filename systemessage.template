@@ -30,8 +30,8 @@ Question: The input question the you must Answer
 You should respond with:
 
 Thought: you should always think about what to do
-Action: the action to take should be one of the following [{tool_names}]
-Action Input: the input to the action
+Action Input: the input or parameter or argument to the action
+Action: the action to take should be one of the following [{tool_names}] 
 Observation: what you observed 
 if no Action put, give an Final Answer. After action is ran give a Final Answer
 ...(This Thought/Action/Action Input/Observation can repeat N Times)
