@@ -129,7 +129,7 @@ third_party_tools = [
      Tool(
         name ="BrawlStarsRankingforCountries",
         func=brawl_stars_ranking_for_countries,
-        description="When the user asks to rank the brawl stars country taking the following country as input."
+        description="When the user asks to rank the brawl stars it takes the country name as input."
     ),
      Tool(
         name ="BrawlStarsPlayerRetrieval",
@@ -257,7 +257,7 @@ class MyCustomAgent:
                     # Start a new stream with updated history including tool response
                     async for inner_part in self.llm.astream(self.chat_history):
                         print(f"Inner stream part: {inner_part.content}")
-                        if inner_part.content == "<tlhink>":
+                        if inner_part.content == "<think>":
                             skip = True
                         if inner_part.content == "</think>":
                             skip = False
@@ -272,14 +272,13 @@ class MyCustomAgent:
                         if ' ' in content.lstrip(): # catch all
                             match_no_action_inner = pattern.search(content)
                             if not match_no_action_inner:
-                                print(len(content.split(' ')))
                                 if len(content.split(' ')) == 2 and ' ' in inner_part.content: #get left over buffer and make sure its not duplicate
                                     print(content)
                                     print(f'*{inner_part.content}*')
                                     yield CustomContent(content=content.split(' ')[0] + " " + inner_part.content)
                                 else:
                                     print(f"*{inner_part.content}*")
-                                    yield innert_part
+                                    yield inner_part
 
                     # After inner stream ends, reset content to avoid mixing old tokens
                     print("Resetting content")
@@ -290,7 +289,6 @@ class MyCustomAgent:
                 print(match_no_action)
 
                 if not match_no_action:
-                    print(len(content.split(' ')))
                     if len(content.split(' ')) == 2 and ' ' in part.content:
                         print(content)
                         print(f'*{part.content}*')
