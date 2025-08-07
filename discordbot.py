@@ -15,9 +15,11 @@ import myprompts
 
 def create_bot(ollamaclient,chat_ollama,logger): 
     intents = nextcord.Intents.default()
+    intents.members = True
     intents.messages = True
     intents.guilds = True
     intents.message_content = True
+    intents.presences = True
     bot = BotRoutine(command_prefix="!", intents=intents,ollamaclient=ollamaclient,chat_ollama=chat_ollama,logger=logger)
     return bot
 
@@ -124,7 +126,7 @@ class BotRoutine(commands.Bot):
                 self.hashMessage[message.author.id]['content'] = "<@" + str(message.author.id) + ">  "
                 self.hashMessage[message.author.id]['partNum'] = 0     
                 
-                agent = get_agent(self.chat_ollama,myprompts.system_message_prompt)
+                agent = get_agent(self.chat_ollama,myprompts.system_message_prompt,{ "message": message, "bot" : self })
                 
                 self.hashMessage[message.author.id]['messages'].append(HumanMessage(content="Question:" + mymessage))
                 skip = False

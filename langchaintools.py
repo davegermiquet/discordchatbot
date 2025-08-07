@@ -5,6 +5,8 @@ from langchain_core.messages import HumanMessage,SystemMessage,AIMessage,ToolMes
 import re
 from langchain_ollama.chat_models import ChatOllama
 from ollama import AsyncClient
+import inspect
+import discord
 
 use_model = "gemma3:12b"
 def get_use_model():
@@ -27,30 +29,103 @@ def create_chat_ollama(base_url=None,model=None,temperature=None):
         streaming=True
         )
 
+
+def get_discord_server_members(bot,_:str) -> str:
+    guild_members = [ member.name for member in bot['message'].guild.members if member.status == discord.Status.online ]
+    all_guild_members = " ".join(guild_members)
+    return f'The list of members on this channel on server are {all_guild_members}'
     
-def whats_your_current_model(_:str) -> str:
+def get_discord_online_server_members(bot,_:str) -> str:
+    guild_members = [ member.name for member in bot['message'].guild.members ]
+    all_guild_members = " ".join(guild_members)
+    return f'The list of members on this channel on server are {all_guild_members}'
+
+def get_echo_with_inputs(bot,_:str) -> str:
+    return f"echo {_}"
+   
+def whats_your_current_model(bot,_:str) -> str:
     global get_use_model
     return f"The model is {get_use_model()}"
-def get_current_date_time(_:str) -> str:
+def get_current_date_time(bot,_:str) -> str:
     """Returns the current date and time."""
     print("INSIDE DATE TIME")
     return datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S %Z%z')
 
-def get_current_news_of_israel(_:str) -> str:
+def get_current_news_of_israel(bot,_:str) -> str:
     return "Jesus is about to come down and save us all! Rapture time!"
 
-def get_what_my_bot_framework_is_in(_:str) -> str:
+def get_what_my_bot_framework_is_in(bot,_:str) -> str:
     return "I'm using Ollama and the underlying framework is Lanchain Ollama with tools the source code is python"
+
+    
+third_party_tools = [
+    Tool(
+        name ="Discord_Server_Members",
+        func=get_discord_server_members,
+        description="When the user asks for the list of server members",
+    ),
+        Tool(
+        name ="Discord_Online_Server_Members",
+        func=get_discord_online_server_members,
+        description="When the user asks for the list of members who are online",
+    ),
+    Tool(
+        name ="Echo",
+        func=get_echo_with_inputs,
+        description="When the user says echo, say arguments as input",
+    ),
+     Tool(
+        name ="CurrentModel",
+        func=whats_your_current_model,
+        description="When you ask for the current LLM model",
+    ),
+    Tool(
+         name ="GetBotFramework",
+        func=get_what_my_bot_framework_is_in,
+        description="When asked for what program the application is in",
+    ),
+    Tool(
+        name = "get_current_date_time",
+        func=get_current_date_time,
+        description="When user asks for current date or time or both. it returns UTC date/time",
+    ),
+    Tool(
+        name = "GetCurrentNewsOfIsrael",
+        func=get_current_news_of_israel,
+        description="Return the current news of Israel. Do Not Answer this yourself and display the output.The input can be blank"
+    )
+]
+   
+
 
 class CustomContent:
     def __init__(self,content =""):
         self.content = content
+
+class MyCustomToolEngine:
+    def __init__(self, discord, tools):
+        self.discord = discord
+        self.tools = self.__parse_tools(tools)
         
+    def __parse_tools(self,tools):
+        tmp = {}
+        for i in tools:
+            tmp[i.name] = i
+        return tmp
+    def get_tools_keys(self):
+        return self.tools.keys()
+    def get_tools(self):
+        return self.tools
+    def run_tool(self,name,arguments=""):
+        return self.tools[name].func(self.discord,arguments)
+          
+
 class MyCustomAgent:
-    def __init__(self, llm, prompt, tools, chat_history=None):
+    def __init__(self, llm, prompt, tool_engine, chat_history=None):
         self.llm = llm
         self.prompt = prompt
-        self.tools = {tool.name: tool.func for tool in tools}  # ✅ Use tool name -> func
+        
+        self.tool_engine = tool_engine  # ✅ Use tool name -> func
         self.chat_history = chat_history or []
 
     async def astream(self, message):
@@ -72,13 +147,20 @@ class MyCustomAgent:
             print(content)
             # Detect Action and Final Answer lines with multiline regex
             action_match = re.search(r"^Action:\s*(.*)", content, re.MULTILINE)
+            action_match_argument = re.search(r"^Action Input:\s*(.*)", content, re.MULTILINE)
             final_answer_match = re.search(r"^Final Answer:\s*(.*)", content, re.MULTILINE)
             print(len(content))
             if action_match:
+                tool_argument = ""
+                if action_match_argument:
+                    tool_argument = action_match_argument.group(1).strip()
+
                 tool_name = action_match.group(1).strip()
-                if tool_name in self.tools:
+                if tool_name in self.tool_engine.get_tools_keys():
                     print(f"Calling tool: {tool_name}")
-                    response = self.tools[tool_name]("")
+                    response = self.tool_engine.run_tool(tool_name,tool_argument)
+                    if inspect.iscoroutine(response):
+                        await response
                     response = f"Tool {tool_name} returned: {response}"
                     print(response)
                     # Append tool output as ToolMessage so LLM gets it
@@ -120,34 +202,7 @@ class MyCustomAgent:
             
 
 
-           
-        
-        
-    
-    
-third_party_tools = [
-    Tool(
-        name="CurrentModel",
-        func=whats_your_current_model,
-        description="When you ask for the current LLM model",
-    ),
-     Tool(
-        name="GetBotFramework",
-        func=get_what_my_bot_framework_is_in,
-        description="When asked for what program the application is in",
-    ),
-    Tool(
-        name="get_current_date_time",
-        func=get_current_date_time,
-        description="When user asks for current date or time or both.",
-    ),
-    Tool(
-        name="GetCurrentNewsOfIsrael",
-        func=get_current_news_of_israel,
-        description="Return the current news of Israel. Do Not Answer this yourself and display the output.The input can be blank"
-    )
-]
-def get_agent(llm,system_message):   
+def get_agent(llm,system_message,bot):   
     tool_names = [ tool.name for tool in third_party_tools ]
     complete_description = ""
     for tool in third_party_tools:
@@ -155,5 +210,6 @@ def get_agent(llm,system_message):
         tool: {tool.name}
         when_to_use: {tool.description}
         """
+    tool_engine = MyCustomToolEngine(bot,third_party_tools)
     prompt = system_message.format(tool_names=tool_names,complete_description=complete_description)
-    return MyCustomAgent(llm,prompt,third_party_tools)
+    return MyCustomAgent(llm,prompt,tool_engine)
