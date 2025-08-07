@@ -9,7 +9,7 @@ from shared import ALLOWED_USER_IDS
 from shared import MAX_LENGTH
 from langchaintools import get_agent
 from shared import POST_TYPE
-
+import base64
 from langchain_core.messages import HumanMessage,AIMessage
 import myprompts
 
@@ -127,8 +127,17 @@ class BotRoutine(commands.Bot):
                 self.hashMessage[message.author.id]['partNum'] = 0     
                 
                 agent = get_agent(self.chat_ollama,myprompts.system_message_prompt,{ "message": message, "bot" : self })
-                
-                self.hashMessage[message.author.id]['messages'].append(HumanMessage(content="Question:" + mymessage))
+                if message.attachments:
+                    if message.attachments[0].content_type and message.attachments[0].content_type.startswith("image/"):
+                        image_bytes = await message.attachments[0].read()
+                        image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                        print("inside pic")
+                    
+                if message.attachments:
+                    self.hashMessage[message.author.id]['messages'].append(HumanMessage( content = [ {"type": "text","text":f"Question: {mymessage}"} ,{"type": "image_url", "image_url": f"data:image/jpeg;base64,{image_base64}"}]))
+                else:
+                    self.hashMessage[message.author.id]['messages'].append(HumanMessage(content=f"Question: {mymessage}"))
+
                 skip = False
                 async for part in agent.astream({ "input": self.hashMessage[message.author.id]['messages'][-1].content,"chat_history" : self.hashMessage[message.author.id]['messages']}):
                     if part:
@@ -139,7 +148,7 @@ class BotRoutine(commands.Bot):
                             self.hashMessage[message.author.id]['partNum'] = self.hashMessage[message.author.id]['partNum'] + 1
                             self.hashMessage[message.author.id]['content'] = self.hashMessage[message.author.id]['content'] + part.content
                             self.logger.info(self.hashMessage[message.author.id]['partNum'])
-                            if len(self.hashMessage[message.author.id]['messages']) > 70:
+                            if len(self.hashMessage[message.author.id]['messages']) > 30:
                                 self.hashMessage[message.author.id]['messages'].pop(0)
                             if POST_TYPE == "Character":
                                 print("Character")

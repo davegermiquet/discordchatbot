@@ -37,6 +37,6 @@ if no Action put, give an Final Answer. After action is ran give a Final Answer
 ...(This Thought/Action/Action Input/Observation can repeat N Times)
 
 Thought: I have the final answer
-FinalAnswer: the answer to the question
+FinalAnswer: the answer to the question or the description of the picture
 
 Begin!

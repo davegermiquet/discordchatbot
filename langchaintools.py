@@ -33,14 +33,23 @@ def create_chat_ollama(base_url=None,model=None,temperature=None):
         streaming=True
         )
 
+async def get_user_from_id(bot,_:str) -> str:
+    try:
+        user = await bot['bot'].fetch_user(int(_))
+        content = f'User: {user.name}'
+    except:
+        content = "Sorry cannot find user"
+    return content
+        
 async def get_message_history(bot,_:str) -> str:
     content = ""
     async for message in bot['message'].channel.history(limit=300):  # You can change limit or use before/after
-        content = content + message.content
-    return f'Please summarize the following content {content}'
+        content = f"{content } {message.author.id}: {message.content}\n"
+    return f"""This is the message history where format is author.id: message content 
+              {content}"""
 
 def brawl_stars_stats_for_tag(bot,_:str) -> str:
-    content = "Sorry can't fidn user id"
+    content = "Sorry can't find user id"
     BRAWLTOKEN=os.environ.get("BRAWLAPI")
     brawlclient = brawlstats.Client(token=BRAWLTOKEN)
     if "#" in _[:2]:
@@ -86,6 +95,8 @@ def brawl_stars_ranking_for_countries(bot,_:str) -> str:
         print(content_array)
         for single in content_array:
             print(single)
+
+
             singleContent = f''' Tag: {single.tag}	
                             Name: {single.name}
                             Trophies: {single.trophies}
@@ -127,6 +138,11 @@ def get_what_my_bot_framework_is_in(bot,_:str) -> str:
     
 third_party_tools = [
      Tool(
+        name='DiscordUserNameFromId',
+        func=get_user_from_id,
+        description="Converts discord UserId to name using userid as input"
+    ),
+     Tool(
         name ="BrawlStarsRankingforCountries",
         func=brawl_stars_ranking_for_countries,
         description="When the user asks to rank the brawl stars it takes the country name as input."
@@ -139,7 +155,7 @@ third_party_tools = [
      Tool(
         name ="Discord_Message_History",
         func=get_message_history,
-        description="When the user asks to summarize the conversation of the discord channel. Summarize the conversation",
+        description="Get this record when user asks about Message history and do what the user asks",
     ),
     Tool(
         name ="Discord_Server_Members",
@@ -151,11 +167,11 @@ third_party_tools = [
         func=get_discord_online_server_members,
         description="When the user asks for the list of members who are online",
     ),
-    Tool(
-        name ="Echo",
-        func=get_echo_with_inputs,
-        description="When the user says echo, say arguments as input",
-    ),
+    # Tool(
+    #     name ="Echo",
+    #     func=get_echo_with_inputs,
+    #     description="When the user says echo, say arguments as input",
+    # ),
      Tool(
         name ="CurrentModel",
         func=whats_your_current_model,
@@ -200,8 +216,9 @@ class MyCustomToolEngine:
         return self.tools
     def run_tool(self,name,arguments=""):
         return self.tools[name].func(self.discord,arguments)
-          
-
+    def tool_inspect(self,name):
+        return self.tools[name].func
+        
 class MyCustomAgent:
     def __init__(self, llm, prompt, tool_engine, chat_history=None):
         self.llm = llm
@@ -242,9 +259,10 @@ class MyCustomAgent:
                 tool_name = action_match.group(1).strip()
                 if tool_name in self.tool_engine.get_tools_keys():
                     print(f"Calling tool: {tool_name}")
-                    response = self.tool_engine.run_tool(tool_name,tool_argument)
-                    if inspect.iscoroutine(response):
+                    if inspect.iscoroutinefunction(self.tool_engine.tool_inspect(tool_name)):
                         response =  await self.tool_engine.run_tool(tool_name,tool_argument)
+                    else:
+                        response = self.tool_engine.run_tool(tool_name,tool_argument)
                         
                     response = f"Tool {tool_name} returned: {response}"
                     print(response)
@@ -265,6 +283,7 @@ class MyCustomAgent:
                         if skip:
                             continue
                         content += inner_part.content
+                        print(content)
                         # Check if Final Answer in inner stream to break early
                         if re.search(r"^Final ?Answer:\s*(.*)", content, re.MULTILINE):
                             print("Final Answer found in inner stream, breaking")
@@ -279,7 +298,7 @@ class MyCustomAgent:
                                 else:
                                     print(f"*{inner_part.content}*")
                                     yield inner_part
-
+                        
                     # After inner stream ends, reset content to avoid mixing old tokens
                     print("Resetting content")
                     content = ""
