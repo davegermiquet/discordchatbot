@@ -38,6 +38,29 @@ async def get_message_history(bot,_:str) -> str:
         content = content + message.content
     return f'Please summarize the following content {content}'
 
+def brawl_stars_stats_for_tag(bot,_:str) -> str:
+
+    BRAWLTOKEN=os.environ.get("BRAWLAPI")
+    brawlclient = brawlstats.Client(token=BRAWLTOKEN)
+    if "#" in _[:2]:
+        try:
+            response_gotten = brawlclient.get_player(_)
+        except:
+            content = "sorry can't get response invalid tag"
+        content = f"""
+        Name: {response_gotten.name}
+        Tag: {response_gotten.tag}
+        Trophies: {response_gotten.trophies}
+        Highest  Trophies: {response_gotten.highest_trophies}
+        3v3 wins: {response_gotten.team_victories} Solo wins: {response_gotten.solo_victories}
+        Club: {response_gotten.club.name}
+        """
+        if response_gotten.brawlers:
+            top = response_gotten.brawlers[0]
+            content = content + f"Best brawler: {top.name} Trophies {top.trophies}"
+        else: 
+            content = "invalid tag"
+    return f'{content}'
 
 
 def brawl_stars_ranking_for_countries(bot,_:str) -> str:
@@ -105,6 +128,11 @@ third_party_tools = [
         name ="BrawlStarsRankingforCountries",
         func=brawl_stars_ranking_for_countries,
         description="When the user asks to rank the brawl stars country taking the following country as input."
+    ),
+     Tool(
+        name ="BrawlStarsPlayerRetrieval",
+        func=brawl_stars_stats_for_tag,
+        description="When the user asks for info for a brawl stars player taking the tag starting with # as input."
     ),
      Tool(
         name ="Discord_Message_History",
