@@ -14,6 +14,8 @@ pip install python-dotenv
 pip install nextcord
 pip install ollama
 
+edit the .env file and put the following.
+
 BOTTOKEN=your_discord_bot_token_here
 HOSTOLLAMA=ollama_address:port
 ```
