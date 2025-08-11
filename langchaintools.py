@@ -122,7 +122,7 @@ def whats_your_current_model(bot,_:str) -> str:
     return f"The model is {get_use_model()}"
 def get_current_date_time(bot,_:str) -> str:
     """Returns the current date and time."""
-    return datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S %Z%z')
+    return datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z%z')
 
 def get_what_my_bot_framework_is_in(bot,_:str) -> str:
     return "I'm using Ollama and the underlying framework is Lanchain Ollama with tools the source code is python"
